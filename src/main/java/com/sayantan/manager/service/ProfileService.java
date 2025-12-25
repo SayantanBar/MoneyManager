@@ -12,11 +12,19 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ProfileService {
     private final ProfileRepository profileRepository;
+    private final EmailService emailService;
 
     public ProfileDTO registerProfile(ProfileDTO profileDTO) {
         ProfileEntity newProfile = toEntity(profileDTO);
         newProfile.setActivationToken(UUID.randomUUID().toString());
         newProfile = profileRepository.save(newProfile);
+        // send activation email
+
+        //send activation email
+        String activationLink = "http://localhost:8080/api/v1.0/activate?token=" + newProfile.getActivationToken();
+        String subject = "Activate your Money Manager account";
+        String body = "Click on the following link to activate your account: " + activationLink;
+        emailService.sendEmail(newProfile.getEmail(), subject, body);
         return toDTO(newProfile);
     }
 
@@ -41,5 +49,13 @@ public class ProfileService {
                 .createdAt(profileEntity.getCreatedAt())
                 .updatedAt(profileEntity.getUpdatedAt())
                 .build();
+    }
+
+    public boolean activateProfile(String activeToken) {
+        return profileRepository.findByActivationToken(activeToken).map(profile -> {
+            profile.setIsActive(true);
+            profileRepository.save(profile);
+            return true;
+        }).orElse(false);
     }
 }
